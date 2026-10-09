@@ -33,16 +33,17 @@ dependencies pointing inward, plus cycle-freedom and the no-`src`-imports-barrel
   `ParseResult`, the semantic structures, and `Grammar` (which builds
   First/Follow/predict sets and the parse table from a `List<Production>`,
   classifying `<...>` symbols as nonterminals).
-- **`contracts/`** — the ports: `Scanner`, `GrammarLoader`, `Parser`.
+- **`contracts/`** — the ports: `Scanner`, `GrammarLoader`, `Parser`,
+  `CodeGenerator`.
 - **`usecases/`** — the application facades: `ScanUsecase`, `ParseUsecase`,
-  each depending only on a contract.
+  `CompileUsecase`, each depending only on a contract.
 - **`adapters/`** — the concrete implementations: `TableScanner`,
-  `TextGrammarLoader`, `PredictiveLlParser`.
+  `TextGrammarLoader`, `PredictiveLlParser`, `SemanticCodeGenerator`,
+  and `parseReservedTokens`.
 
 The CLI (`bin/`) is the **composition root**: it constructs the adapters and
-injects them — scanner into parser, parser into the parse usecase. A future
-`CodeGenerator` contract + `CompileUsecase` slot into the same pattern when the
-semantic-action BACKLOG item lands.
+injects them — scanner into parser, scanner+grammar into the code generator,
+then the parser/generator into their usecases.
 
 ## Deviations from the bible (tracked, see BACKLOG for open ones)
 
@@ -55,11 +56,12 @@ semantic-action BACKLOG item lands.
 - **`SymbolTable` is unbounded.** The original capped it at 1024 slots and
   threw on overflow; that fixed bound was a 2016 artifact and was dropped
   (`lib/src/domain/semantic/symbol_table.dart`).
-- **Semantic `#Action` execution is stubbed.** The parser driver pops grammar
-  `#Action` symbols without firing them, exactly as the original's driver did
-  (its TODO). The semantic layer — `Semantic`, `SemanticStack`, `SymbolTable`,
-  and the records — is present, coherent, and unit-tested as the ready seam.
-  Wiring the actions into executable 3-address codegen is an open BACKLOG item.
+- **Semantic `#Action` execution lives only in the codegen path.** The trace
+  driver (`PredictiveLlParser`) pops `#Action` symbols without firing them,
+  faithful to the original; **`SemanticCodeGenerator`** executes them and
+  emits three-address code via the `compile` verb. The semantic layer —
+  `Semantic`, `SemanticStack`, `SymbolTable`, and the records — is the seam
+  both share. BACKLOG, which tracked the wiring, is now empty.
 - **Grammar reader appends a trailing space per production line** so a trailing
   `#Action` symbol is emitted. The original's files carried trailing whitespace
   for exactly this reason (the scanner's Action state has no end-of-line
@@ -70,7 +72,9 @@ semantic-action BACKLOG item lands.
 - Package `ellellone`; executable `ellellone`. Toolchain: Dart via fvm
   (`C:/Users/stayl/fvm/default/bin/dart`) — not on PATH in this shell.
 - CLI verbs: `scan <source-or-file>`, `grammar <grammar-file>`,
-  `parse <grammar-file> <source-or-file>`.
+  `parse <grammar-file> <source-or-file>`,
+  `compile <grammar-file> <source-or-file>`; a global `--reserved <file>`
+  overrides the program keyword spellings (`example/reserved_lang.txt`).
 - Sample inputs live in `example/` (grammar1/2/blocks + a demo program); tests
   read them via `test/support/example.dart`.
 - Gate: `dart analyze --fatal-infos --fatal-warnings` (zero diagnostics of any
