@@ -12,12 +12,23 @@ import 'package:fpdart/fpdart.dart';
 /// - `grammar <grammar-file>` — load a grammar and print its parse table.
 /// - `parse <grammar-file> <source-or-file>` — predictively parse a program
 ///   against a grammar and print the LL(1) trace.
+/// - `compile <grammar-file> <source-or-file>` — emit three-address code.
+///
+/// `--reserved <file>` (global) overrides the program's reserved-keyword
+/// spellings with a `kindName = lexeme` dictionary (see [parseReservedTokens]).
 ///
 /// This is the UI ring: the only place that wires adapters into usecases,
 /// formats a [CompileFailure] and exits non-zero. Nothing in `lib/` prints or
 /// exits.
 Future<void> main(List<String> arguments) async {
   final parser = ArgParser()
+    ..addOption(
+      'reserved',
+      abbr: 'r',
+      help:
+          'file of kindName = lexeme reserved-token pairs (overrides the '
+          'built-in program keyword spellings)',
+    )
     ..addCommand('scan')
     ..addCommand('grammar')
     ..addCommand('parse')
@@ -26,31 +37,55 @@ Future<void> main(List<String> arguments) async {
   final result = parser.parse(arguments);
   final command = result.command?.name;
   if (command == null) {
-    stderr.writeln('usage: ellellone <scan|grammar|parse|compile> ...');
+    stderr.writeln(
+      'usage: ellellone [--reserved file] <scan|grammar|parse|compile> ...',
+    );
     exitCode = 64;
     return;
   }
 
+  final reserved = _reservedDict(result['reserved'] as String?);
+  if (result['reserved'] != null && reserved == null) return;
+
   switch (command) {
     case 'scan':
-      _scan(result.command!);
+      _scan(result.command!, reserved);
     case 'grammar':
       _grammar(result.command!);
     case 'parse':
-      _parse(result.command!);
+      _parse(result.command!, reserved);
     case 'compile':
-      _compile(result.command!);
+      _compile(result.command!, reserved);
   }
 }
 
-void _scan(ArgResults arguments) {
+/// Loads and parses the `--reserved` dictionary file, reporting an error
+/// itself. Returns `null` when no file was given or when loading failed.
+Map<TokenType, String>? _reservedDict(String? path) {
+  if (path == null) return null;
+  final file = File(path);
+  if (!file.existsSync()) {
+    stderr.writeln('reserved dictionary file not found: $path');
+    exitCode = 66;
+    return null;
+  }
+  try {
+    return parseReservedTokens(file.readAsStringSync());
+  } on FormatException catch (e) {
+    stderr.writeln('reserved dictionary error: ${e.message}');
+    exitCode = 65;
+    return null;
+  }
+}
+
+void _scan(ArgResults arguments, Map<TokenType, String>? reserved) {
   final source = _sourceOf(arguments.rest);
   if (source == null) {
     stderr.writeln('usage: ellellone scan <source-or-file>');
     exitCode = 64;
     return;
   }
-  final scan = ScanUsecase(TableScanner());
+  final scan = ScanUsecase(TableScanner(reserved: reserved));
   switch (scan.call(source)) {
     case Left(value: final failure):
       stderr.writeln('scan error: ${failure.message}');
@@ -97,7 +132,7 @@ void _grammar(ArgResults arguments) {
   }
 }
 
-void _parse(ArgResults arguments) {
+void _parse(ArgResults arguments, Map<TokenType, String>? reserved) {
   if (arguments.rest.length < 2) {
     stderr.writeln('usage: ellellone parse <grammar-file> <source-or-file>');
     exitCode = 64;
@@ -120,7 +155,7 @@ void _parse(ArgResults arguments) {
   final source = _sourceOf(arguments.rest.sublist(1));
 
   // Composition root: scanner injected into parser, parser into the usecase.
-  final parser = PredictiveLlParser(TableScanner(), grammar);
+  final parser = PredictiveLlParser(TableScanner(reserved: reserved), grammar);
   final parse = ParseUsecase(parser);
   switch (parse.call(source!)) {
     case Left(value: final failure):
@@ -143,7 +178,7 @@ String? _sourceOf(List<String> rest) {
   return arg;
 }
 
-void _compile(ArgResults arguments) {
+void _compile(ArgResults arguments, Map<TokenType, String>? reserved) {
   if (arguments.rest.length < 2) {
     stderr.writeln('usage: ellellone compile <grammar-file> <source-or-file>');
     exitCode = 64;
@@ -167,7 +202,10 @@ void _compile(ArgResults arguments) {
 
   // Composition root: scanner + grammar injected into the code generator,
   // generator into the compile usecase.
-  final generator = SemanticCodeGenerator(TableScanner(), grammar);
+  final generator = SemanticCodeGenerator(
+    TableScanner(reserved: reserved),
+    grammar,
+  );
   final compile = CompileUsecase(generator);
   switch (compile.call(source!)) {
     case Left(value: final failure):

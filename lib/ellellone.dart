@@ -24,6 +24,7 @@
 library;
 
 export 'src/adapters/predictive_parser.dart';
+export 'src/adapters/reserved_tokens.dart';
 export 'src/adapters/scanner_table.dart';
 export 'src/adapters/semantic_code_generator.dart';
 export 'src/adapters/table_scanner.dart';

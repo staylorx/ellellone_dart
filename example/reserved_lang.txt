@@ -1,0 +1,6 @@
+# A demo language whose keywords differ from the defaults.
+begin = START
+end = STOP
+read = GET
+write = PUT
+eofScan = $

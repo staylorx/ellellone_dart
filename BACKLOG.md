@@ -4,10 +4,7 @@ Terse, actionable queue for this repo. No decisions, no metanarrative.
 
 ## Open
 
-- **Configurable reserved-word dictionary.** `programReservedTokens` /
-  `grammarReservedTokens` are compile-time constants in
-  `lib/src/adapters/`; all tests use them or a tiny inline override.
-  Not yet user-facing. (Tiny; do only if a grammar needs it.)
+(none — see Resolved.)
 
 ## Resolved
 
@@ -17,3 +14,9 @@ Terse, actionable queue for this repo. No decisions, no metanarrative.
   (`Declare`, `ADD`/`SUB`, `Store`, `Read`, `Write`, `Halt`) through the
   `Semantic` routines, exposed as `CompileUsecase` and the `compile` CLI verb.
   Verified by `test/compile_test.dart` against hand-computed listings.
+
+- **Configurable reserved-word dictionary.** **RESOLVED 2026-10-08:**
+  `parseReservedTokens` (adapters) parses a `kindName = lexeme` dictionary file
+  and the global `--reserved <file>` CLI flag injects it into the program
+  scanner, so a language's keywords are configurable without editing Dart.
+  Verified by `test/reserved_tokens_test.dart` and `example/reserved_lang.txt`.

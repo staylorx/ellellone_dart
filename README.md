@@ -30,6 +30,16 @@ dart run bin/ellellone.dart compile example/grammar2.txt example/program.txt
 A grammar-file argument is a path; a program argument is a path if it names an
 existing file, otherwise it is treated as inline source.
 
+Custom keywords (e.g. a language using `START`/`STOP` instead of
+`begin`/`end`) can be supplied with a reserved-token dictionary file via the
+global `--reserved <file>` flag — one `kindName = lexeme` line per keyword
+(`example/reserved_lang.txt`):
+
+```sh
+dart run bin/ellellone.dart --reserved example/reserved_lang.txt \
+  scan 'START A := 1 + A; STOP $'
+```
+
 ## Tests
 
 ```sh
