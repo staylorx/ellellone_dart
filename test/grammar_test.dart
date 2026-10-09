@@ -4,10 +4,13 @@ import 'package:test/test.dart';
 
 import 'support/example.dart';
 
+/// Loads a grammar fixture through the [TextGrammarLoader] adapter.
+Grammar loadG(String name) => TextGrammarLoader().load(loadExample(name));
+
 void main() {
   group('Given grammar2', () {
     test('Then it records the full vocabulary and 23 productions', () {
-      final g = Grammar(loadExample('grammar2.txt'));
+      final g = loadG('grammar2.txt');
       g.productions.length.should.be(23);
       g.nonTerminals.contains('<system goal>').should.be(true);
       g.nonTerminals.contains('<statement>').should.be(true);
@@ -19,7 +22,7 @@ void main() {
     test(
       'Then the parse table predicts the ground-truth production numbers',
       () {
-        final g = Grammar(loadExample('grammar2.txt'));
+        final g = loadG('grammar2.txt');
         // Spot-checked against the original parserRun.js trace.
         g.t('<system goal>', 'BeginSym').should.be(23);
         g.t('<program>', 'BeginSym').should.be(1);
@@ -42,7 +45,7 @@ void main() {
     );
 
     test('Then FIRST and FOLLOW sets are populated', () {
-      final g = Grammar(loadExample('grammar2.txt'));
+      final g = loadG('grammar2.txt');
       g.firstSets['Id']!.contains('Id').should.be(true);
       // <primary tail> can derive lambda, so ε is in its FIRST set.
       g.firstSets['<primary tail>']!.contains('Lambda').should.be(true);
@@ -52,10 +55,10 @@ void main() {
   });
 
   group('Given a malformed production', () {
-    test('Then constructing the grammar raises a GrammarFailure', () {
+    test('Then loading the grammar raises a GrammarFailure', () {
       Object? caught;
       try {
-        Grammar('<program> begin <stmt list> end');
+        TextGrammarLoader().load('<program> begin <stmt list> end');
       } catch (e) {
         caught = e;
       }

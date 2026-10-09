@@ -1,8 +1,9 @@
 import 'package:fpdart/fpdart.dart';
 
-import '../failures/compile_failure.dart';
-import '../tokens/token.dart';
-import '../tokens/token_type.dart';
+import '../contracts/scanner.dart';
+import '../domain/failures/compile_failure.dart';
+import '../domain/tokens/token.dart';
+import '../domain/tokens/token_type.dart';
 import 'scanner_table.dart';
 
 /// Sentinel used to mark end-of-input (the original stream produced `null`).
@@ -23,25 +24,37 @@ const Map<TokenType, String> programReservedTokens = {
   TokenType.eofScan: '\$',
 };
 
-/// Reserved keyword table for scanning grammar definition files.
-const Map<TokenType, String> grammarReservedTokens = {
-  TokenType.intLiteral: 'IntLiteral',
-  TokenType.plusOp: 'PlusOp',
-  TokenType.minusOp: 'MinusOp',
-  TokenType.begin: 'begin',
-  TokenType.end: 'end',
-  TokenType.read: 'Read',
-  TokenType.write: 'Write',
-  TokenType.eofScan: '\$',
-};
-
-/// A table-driven lexical scanner.
+/// The concrete state-machine lexer ([Scanner] adapter).
 ///
-/// Walks the source one character at a time through the [scannerTable] state
-/// machine to produce a stream of [Token]s. Skipped lexemes (whitespace and
-/// `--` comments) are recognized and discarded. A lexical miss is returned as
-/// a `Left(LexicalFailure)`, never thrown.
-final class Scanner {
+/// Walks [source] one character at a time through the [scannerTable] state
+/// machine and returns the full token list. The reserved-vocabulary is fixed
+/// at construction (default: [programReservedTokens]).
+final class TableScanner implements Scanner {
+  final Map<TokenType, String> _reserved;
+
+  /// Creates the lexer, optionally overriding the reserved vocabulary.
+  TableScanner({Map<TokenType, String>? reserved})
+    : _reserved = reserved ?? programReservedTokens;
+
+  @override
+  Either<LexicalFailure, List<Token>> scan(String source) {
+    final lexer = _Lexer(source, _reserved);
+    final tokens = <Token>[];
+    while (true) {
+      final one = lexer.one();
+      if (one.isLeft()) {
+        return Left<LexicalFailure, List<Token>>(one.getLeft().toNullable()!);
+      }
+      final token = one.getRight().toNullable()!;
+      if (token.type == TokenType.eof) break;
+      tokens.add(token);
+    }
+    return Right(tokens);
+  }
+}
+
+/// The per-source character reader behind [TableScanner].
+final class _Lexer {
   final String _source;
   final Map<TokenType, String> _reserved;
 
@@ -50,17 +63,12 @@ final class Scanner {
   String _nextChar = ' ';
   String _buffer = '';
 
-  /// Creates a scanner over [source] using [reserved] keyword spellings.
-  Scanner(String source, [Map<TokenType, String>? reserved])
-    : _source = source,
-      _reserved = reserved ?? programReservedTokens {
+  _Lexer(this._source, this._reserved) {
     // Seed one character ahead so the first consumeChar() leaves _currentChar
     // as a virtual leading space and _nextChar holding the first real char.
     _consumeChar();
   }
 
-  /// Reads the next code unit into [_nextChar], returning [_eofChar] past the
-  /// end of [_source].
   String _readChar() {
     if (_index >= _source.length) return _eofChar;
     return _source[_index++];
@@ -71,8 +79,6 @@ final class Scanner {
     _nextChar = _readChar();
   }
 
-  /// Looks up the transition for [ch] in [state], mapping end-of-input to a
-  /// newline (as the original stream `null` did).
   Either<LexicalFailure, Transition> _lookupState(int state, String ch) {
     final spec = scannerTable[state];
     if (spec == null) {
@@ -90,7 +96,6 @@ final class Scanner {
     return Right(transition);
   }
 
-  /// Resolves the reserved keyword for [_buffer], if any.
   TokenType? _reservedType(String buffer) {
     for (final entry in _reserved.entries) {
       if (entry.value == buffer) return entry.key;
@@ -98,12 +103,8 @@ final class Scanner {
     return null;
   }
 
-  /// Reads a single [Token].
-  ///
-  /// Skips whitespace and comments, recognizes reserved keywords, and returns
-  /// the next meaningful token. Returns `EofSym` when the source is exhausted
-  /// and a `Left(LexicalFailure)` when a character cannot be transitioned.
-  Either<LexicalFailure, Token> scan() {
+  /// Reads the next single [Token], skipping whitespace and comments.
+  Either<LexicalFailure, Token> one() {
     _buffer = '';
     var state = 0;
     while (true) {
@@ -150,9 +151,6 @@ final class Scanner {
     return Right(const Token(TokenType.eof, 'EofSym'));
   }
 
-  /// Decides whether the accepting [state] with accumulated [buffer] produces
-  /// a token. Returns `null` when the lexeme is skipped (whitespace/comment)
-  /// and scanning must continue.
   Token? _emit(int state, String buffer) {
     final spec = scannerTable[state];
     final reserved = _reservedType(buffer);
@@ -161,24 +159,5 @@ final class Scanner {
       return Token(spec.type!, buffer);
     }
     return null;
-  }
-
-  /// Scans the whole source and joins every token name with a space, ending
-  /// with `EofSym` — the same listing the original `scannerRun.js` printed.
-  ///
-  /// Throws nothing; the stop condition swallows any `Left` from an unskippable
-  /// char so the shape of the listing always matches the original.
-  Either<LexicalFailure, String> tokensAsString() {
-    final names = <String>[];
-    while (true) {
-      final look = scan();
-      if (look.isLeft()) {
-        return Left<LexicalFailure, String>(look.getLeft().toNullable()!);
-      }
-      final token = look.getRight().toNullable()!;
-      if (token.type == TokenType.eof) break;
-      names.add(token.type.name);
-    }
-    return Right('${names.join(' ')} EofSym');
   }
 }

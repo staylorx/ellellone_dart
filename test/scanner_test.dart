@@ -2,18 +2,24 @@ import 'package:ellellone/ellellone.dart';
 import 'package:shouldly/shouldly.dart';
 import 'package:test/test.dart';
 
-/// The token stream the scanner must produce for a program, exact to the
-/// original Node implementation.
-String scanAll(String source) => Scanner(
-  source,
-).tokensAsString().fold((failure) => throw failure, (tokens) => tokens);
+/// The token-stream listing the scanner must produce for a program, exact to
+/// the original Node implementation.
+String scanAll(String source) => TableScanner()
+    .scan(source)
+    .fold(
+      (failure) => throw failure,
+      (tokens) => '${tokens.map((t) => t.type.name).join(' ')} EofSym',
+    );
 
 /// Scans with an explicit reserved-keyword dictionary, mirroring how the
 /// original tests configured the scanner per program.
-String scanAllWith(String source, Map<TokenType, String> reserved) => Scanner(
-  source,
-  reserved,
-).tokensAsString().fold((failure) => throw failure, (tokens) => tokens);
+String scanAllWith(String source, Map<TokenType, String> reserved) =>
+    TableScanner(reserved: reserved)
+        .scan(source)
+        .fold(
+          (failure) => throw failure,
+          (tokens) => '${tokens.map((t) => t.type.name).join(' ')} EofSym',
+        );
 
 const Map<TokenType, String> upperReserved = {
   TokenType.begin: 'BEGIN',
@@ -79,7 +85,7 @@ void main() {
   group('Given a source with an unbufferable character', () {
     test('When scanned, then it surfaces a lexical failure', () {
       // A lone backtick has no transition from the start state.
-      final result = Scanner(r'`').scan();
+      final result = TableScanner().scan(r'`');
       result.isLeft().should.be(true);
       result.getLeft().toNullable()!.should.beOfType<LexicalFailure>();
     });

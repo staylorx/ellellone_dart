@@ -4,7 +4,7 @@ import 'package:args/args.dart';
 import 'package:ellellone/ellellone.dart';
 import 'package:fpdart/fpdart.dart';
 
-/// The `ellellone` command-line interface.
+/// The `ellellone` command-line interface — the composition root.
 ///
 /// Verbs:
 ///
@@ -13,8 +13,9 @@ import 'package:fpdart/fpdart.dart';
 /// - `parse <grammar-file> <source-or-file>` — predictively parse a program
 ///   against a grammar and print the LL(1) trace.
 ///
-/// This is the UI ring: it is the only place that formats a [CompileFailure]
-/// and exits non-zero. Nothing in `lib/` prints or exits.
+/// This is the UI ring: the only place that wires adapters into usecases,
+/// formats a [CompileFailure] and exits non-zero. Nothing in `lib/` prints or
+/// exits.
 Future<void> main(List<String> arguments) async {
   final parser = ArgParser()
     ..addCommand('scan')
@@ -46,13 +47,13 @@ void _scan(ArgResults arguments) {
     exitCode = 64;
     return;
   }
-  final scanner = Scanner(source);
-  switch (scanner.tokensAsString()) {
+  final scan = ScanUsecase(TableScanner());
+  switch (scan.call(source)) {
     case Left(value: final failure):
       stderr.writeln('scan error: ${failure.message}');
       exitCode = 65;
     case Right(value: final tokens):
-      stdout.writeln(tokens);
+      stdout.writeln('${tokens.map((t) => t.type.name).join(' ')} EofSym');
   }
 }
 
@@ -71,7 +72,7 @@ void _grammar(ArgResults arguments) {
   }
   final Grammar grammar;
   try {
-    grammar = Grammar(file.readAsStringSync());
+    grammar = TextGrammarLoader().load(file.readAsStringSync());
   } on GrammarFailure catch (e) {
     stderr.writeln('grammar error: $e');
     exitCode = 65;
@@ -107,15 +108,18 @@ void _parse(ArgResults arguments) {
   }
   final Grammar grammar;
   try {
-    grammar = Grammar(file.readAsStringSync());
+    grammar = TextGrammarLoader().load(file.readAsStringSync());
   } on GrammarFailure catch (e) {
     stderr.writeln('grammar error: $e');
     exitCode = 65;
     return;
   }
   final source = _sourceOf(arguments.rest.sublist(1));
-  final parser = LlParser(grammar, Scanner(source!));
-  switch (parser.parse()) {
+
+  // Composition root: scanner injected into parser, parser into the usecase.
+  final parser = PredictiveLlParser(TableScanner(), grammar);
+  final parse = ParseUsecase(parser);
+  switch (parse.call(source!)) {
     case Left(value: final failure):
       stderr.writeln('parse error: ${failure.message}');
       exitCode = 65;

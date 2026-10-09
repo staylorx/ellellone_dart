@@ -5,10 +5,15 @@ import 'package:test/test.dart';
 
 import 'support/example.dart';
 
+/// Parses a grammar fixture against a program through the usecase seam.
 Either<CompileFailure, ParseResult> parseWith(
   String grammarName,
   String source,
-) => LlParser(Grammar(loadExample(grammarName)), Scanner(source)).parse();
+) {
+  final grammar = TextGrammarLoader().load(loadExample(grammarName));
+  final parser = PredictiveLlParser(TableScanner(), grammar);
+  return ParseUsecase(parser).call(source);
+}
 
 void main() {
   group('Given the demo program against grammar2', () {

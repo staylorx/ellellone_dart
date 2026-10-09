@@ -1,4 +1,4 @@
-import '../tokens/token_type.dart';
+import '../domain/tokens/token_type.dart';
 
 /// The movement actions a transition can request, mirroring the original
 /// Node scanner's bit-coded action table.

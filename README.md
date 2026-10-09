@@ -39,8 +39,13 @@ enforces the package's layer direction and cycle-freedom.
 
 ## What's here
 
-- `lib/` — the library: `Scanner`, `Grammar`, `LlParser`, and the semantic
-  layer (`SemanticStack`, `SymbolTable`, `Semantic`, and the attribute records).
-- `bin/ellellone.dart` — the command-line interface.
+- `lib/` — the library, laid out as clean-architecture rings: `src/domain/`
+  (pure entities and logic: `Token`, `Grammar`, `CompileFailure`,
+  `ParseResult`, the semantic structures), `src/contracts/` (the `Scanner`,
+  `GrammarLoader`, `Parser` ports), `src/usecases/` (`ScanUsecase`,
+  `ParseUsecase`), and `src/adapters/` (`TableScanner`, `TextGrammarLoader`,
+  `PredictiveLlParser`).
+- `bin/ellellone.dart` — the command-line interface and composition root, which
+  injects the adapters (scanner into parser, parser into the parse usecase).
 - `example/` — the grammar files it ships with and a demo program.
 - `test/` — unit, integration, and architecture tests.

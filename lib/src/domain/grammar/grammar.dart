@@ -1,6 +1,3 @@
-import '../failures/compile_failure.dart';
-import '../scanner/scanner.dart';
-import '../tokens/token_type.dart';
 import 'production.dart';
 
 /// The epsilon marker used across the First/Follow/predict machinery, kept
@@ -10,17 +7,16 @@ const String lambdaMarker = 'Lambda';
 /// Default start symbol whose FOLLOW set seeds the end-of-input marker.
 const String defaultStartSymbol = '<system goal>';
 
-/// Builds an LL(1) grammar from a grammar-definition source: reads the
-/// productions, then computes the First, Follow and predict sets and fills the
-/// parse table used by the predictive parser.
+/// A pure LL(1) grammar: the production list plus the First, Follow, predict
+/// and parse-table sets derived from it.
 ///
-/// The grammar source is plain text (the CLI reads the file); every symbol is
-/// the symbolic token name a [Scanner] produces (`<program>` for nonterminals,
-/// `Id` for terminals), and `λ` denotes the empty production.
+/// This is domain logic with no IO and no scanner dependency. The grammar text
+/// is turned into [Production]s by a `GrammarLoader` adapter; the loader sees
+/// the symbolic token names this grammar reasons over. A nonterminal is any
+/// `<...>` symbol (how the scanner classifies `<program>`), everything else on
+/// a right-hand side is a terminal.
 final class Grammar {
-  final Map<TokenType, String> _reserved;
-
-  final List<Production> _productions = [];
+  final List<Production> _productions;
 
   /// The grammar's nonterminal symbols.
   final Set<String> nonTerminals = <String>{};
@@ -35,10 +31,9 @@ final class Grammar {
   /// parseTable[nonterminal][terminal] = production number to predict.
   final Map<String, Map<String, int>> parseTable = <String, Map<String, int>>{};
 
-  /// Builds the grammar from [source], using [reserved] keyword spellings.
-  Grammar(String source, {Map<TokenType, String>? reserved})
-    : _reserved = reserved ?? grammarReservedTokens {
-    _read(source);
+  /// Builds the grammar and its parse table from [productions].
+  Grammar(List<Production> productions) : _productions = List.of(productions) {
+    _collectVocabulary();
     fillParseTable();
   }
 
@@ -51,61 +46,18 @@ final class Grammar {
   /// FOLLOW sets per nonterminal.
   Map<String, Set<String>> get followSets => _follow;
 
-  /// Reads each non-blank line as one production and records its vocabulary.
-  void _read(String source) {
-    var number = 1;
-    for (final line in source.split('\n')) {
-      if (line.trim().isEmpty) continue;
-      // Append a terminator so a trailing `#Action` symbol is emitted: the
-      // Action state has no end-of-line transition, and the original files
-      // carried a trailing space for exactly this reason.
-      final scanner = Scanner('$line ', _reserved);
-      final rhArray = <String>[];
-      final rhActions = <String>[];
-      final first = scanner.scan().getRight().toNullable()!;
-      if (first.type != TokenType.nonTerminal) {
-        throw GrammarFailure(
-          '[Grammar] Expected a nonterminal LHS, found "${first.type.name}"',
-        );
-      }
-      final lhs = first.lexeme;
-      nonTerminals.add(lhs);
-      final produces = scanner.scan();
-      if (produces.isLeft() ||
-          produces.getRight().toNullable()!.type != TokenType.produces) {
-        throw GrammarFailure("The second token should be '->'");
-      }
-      while (true) {
-        final token = scanner.scan();
-        if (token.isLeft()) {
-          throw GrammarFailure(
-            '[Grammar] Could not read production "$line": '
-            '${token.getLeft().toNullable()!.message}',
-          );
-        }
-        final t = token.getRight().toNullable()!;
-        if (t.type == TokenType.eof) break;
-        switch (t.type) {
-          case TokenType.nonTerminal:
-            nonTerminals.add(t.lexeme);
-            rhArray.add(t.lexeme);
-            rhActions.add(t.lexeme);
-          case TokenType.action:
-            rhActions.add(t.lexeme);
-          default:
-            terminals.add(t.type.name);
-            rhArray.add(t.type.name);
-            rhActions.add(t.type.name);
+  /// Separates the vocabulary: `<...>` symbols are nonterminals, the rest of
+  /// the right-hand sides are terminals.
+  void _collectVocabulary() {
+    for (final p in _productions) {
+      nonTerminals.add(p.lhs);
+      for (final s in p.rhs) {
+        if (s.startsWith('<')) {
+          nonTerminals.add(s);
+        } else {
+          terminals.add(s);
         }
       }
-      _productions.add(
-        Production(
-          number: number++,
-          lhs: lhs,
-          rhs: rhArray,
-          rhsActions: rhActions,
-        ),
-      );
     }
   }
 

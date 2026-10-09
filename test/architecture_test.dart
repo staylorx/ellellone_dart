@@ -5,9 +5,10 @@ import 'package:shouldly/shouldly.dart';
 import 'package:test/test.dart';
 
 /// The architecture boundary gate: enforces the bibliography's clean-architecture
-/// shape on this single-package repo (bible §2.9). Because this is a compiler
-/// pipeline rather than a CRUD app, the onion layers are the parsing areas under
-/// `lib/src/`, with the token vocabulary innermost and the parser outermost.
+/// shape on this single-package repo (bible §2.9). The onion layers are the
+/// clean-architecture rings under `lib/src/`: `domain` innermost, then
+/// `contracts`, `usecases`, and `adapters` outermost — dependencies point only
+/// inward.
 void main() {
   late DependencyGraph graph;
 
@@ -37,11 +38,10 @@ void main() {
 
     test('points dependencies inward (onion)', () {
       defineOnion({
-        'tokens': 'src/tokens/**',
-        'semantic': 'src/semantic/**',
-        'scanner': 'src/scanner/**',
-        'grammar': 'src/grammar/**',
-        'parser': 'src/parser/**',
+        'domain': 'src/domain/**',
+        'contracts': 'src/contracts/**',
+        'usecases': 'src/usecases/**',
+        'adapters': 'src/adapters/**',
       }).enforceOnionRules(graph);
     });
   });

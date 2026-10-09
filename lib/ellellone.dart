@@ -1,32 +1,44 @@
 /// ellellone — an LL(1) compiler toolkit reconstructed in Dart.
 ///
-/// Provides a table-driven lexical [Scanner], a [Grammar] engine that builds
-/// First/Follow/predict sets and an LL(1) parse table, a predictive
-/// [LlParser], and the semantic machinery ([SemanticStack], [SymbolTable],
-/// [Semantic]) behind a `bin/ellellone` command-line interface.
+/// Shaped as clean architecture split between independent tools that compose:
+/// a [Scanner], a [GrammarLoader], a [Parser], and (once wired) a code
+/// generator. The ring layout under `src/` is:
 ///
-/// **Error style:** consumers receive FP-style tuples. Lexical, syntax and
-/// grammar failures are carried as a value — `Either<CompileFailure, T>` from
-/// fpdart — never thrown. The CLI is the only ring that formats a failure and
-/// exits. One declared exception: a malformed grammar *definition* raises
-/// [GrammarFailure] at [Grammar] construction, treating a bad grammar file as
-/// a tooling error.
+/// - `domain/` — pure entities and logic ([Token], [TokenType],
+///   [CompileFailure], [Grammar], [ParseResult], the semantic structures).
+/// - `contracts/` — the ports ([Scanner], [GrammarLoader], [Parser]) that
+///   adapters implement and usecases depend on.
+/// - `usecases/` — the application facades ([ScanUsecase], [ParseUsecase]),
+///   injected with the contracts.
+/// - `adapters/` — the concrete implementations ([TableScanner],
+///   [TextGrammarLoader], [PredictiveLlParser]).
 ///
-/// Symbols are the scanner's symbolic token names: `<program>` for
-/// nonterminals, `Id` for terminals, and `λ` for the empty production, all
-/// matching the original Node implementation.
+/// The CLI (`bin/`) is the composition root: it constructs the adapters and
+/// injects them — scanner into parser, parser into the parse usecase.
+///
+/// **Error style:** consumers receive FP-style tuples. Lexical and syntax
+/// failures are carried as a value — `Either<CompileFailure, T>` from fpdart —
+/// never thrown. One declared exception: a malformed grammar *definition*
+/// raises [GrammarFailure] from a [GrammarLoader], treating a bad grammar file
+/// as a tooling error.
 library;
 
-export 'src/failures/compile_failure.dart';
-export 'src/grammar/grammar.dart';
-export 'src/grammar/production.dart';
-export 'src/parser/parser.dart';
-export 'src/parser/parse_result.dart';
-export 'src/scanner/scanner.dart';
-export 'src/scanner/scanner_table.dart';
-export 'src/semantic/records.dart';
-export 'src/semantic/semantic.dart';
-export 'src/semantic/semantic_stack.dart';
-export 'src/semantic/symbol_table.dart';
-export 'src/tokens/token.dart';
-export 'src/tokens/token_type.dart';
+export 'src/adapters/predictive_parser.dart';
+export 'src/adapters/scanner_table.dart';
+export 'src/adapters/table_scanner.dart';
+export 'src/adapters/text_grammar_loader.dart';
+export 'src/contracts/grammar_loader.dart';
+export 'src/contracts/parser.dart';
+export 'src/contracts/scanner.dart';
+export 'src/domain/failures/compile_failure.dart';
+export 'src/domain/grammar/grammar.dart';
+export 'src/domain/grammar/production.dart';
+export 'src/domain/result/parse_result.dart';
+export 'src/domain/semantic/records.dart';
+export 'src/domain/semantic/semantic.dart';
+export 'src/domain/semantic/semantic_stack.dart';
+export 'src/domain/semantic/symbol_table.dart';
+export 'src/domain/tokens/token.dart';
+export 'src/domain/tokens/token_type.dart';
+export 'src/usecases/parse_usecase.dart';
+export 'src/usecases/scan_usecase.dart';
