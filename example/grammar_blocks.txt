@@ -1,0 +1,25 @@
+<program>        -> #Start <block>
+<block>          -> begin <stmt list> end
+<stmt list>      -> <statement> <statement tail>  
+<statement tail> -> <stmt list>
+<statement tail> -> λ
+<statement>      -> <ident> := <expression> ; #Assign($1, $3)
+<statement>      -> Read(<id list>); 
+<statement>      -> Write(<expr list>) ;
+<statement>      -> <block>
+<id list>        -> <ident> #ReadId($1) <id tail>
+<id tail>        -> , <id list>
+<id tail>        -> λ
+<expr list>      -> <expression> #WriteExpr($1) <expr tail>
+<expr tail>      -> , <expr list>  
+<expr tail>      -> λ
+<expression>     -> <primary> #Copy($1, $2) <primary tail> #Copy($2,$$)
+<primary tail>   -> <add op> <expression> #GenInfix($$, $1, $2, $$)  
+<primary tail>   -> λ
+<primary>        -> (<expression>) #Copy($2, $$)
+<primary>        -> <ident> #Copy($1, $$)
+<primary>        -> IntLiteral #ProcessLiteral($$)
+<add op>         -> PlusOp #ProcessOp($$)
+<add op>         -> MinusOp #ProcessOp($$)
+<ident>          -> Id #ProcessId($$)
+<system goal>    -> <program> $ #Finish
