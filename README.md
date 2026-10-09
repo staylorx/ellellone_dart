@@ -16,12 +16,16 @@ dart pub get
 dart run bin/ellellone.dart scan 'begin A := BB + 314 + A; end $'
 dart run bin/ellellone.dart grammar example/grammar2.txt
 dart run bin/ellellone.dart parse example/grammar2.txt example/program.txt
+dart run bin/ellellone.dart compile example/grammar2.txt example/program.txt
 ```
 
 - `scan <source-or-file>` — tokenize a program and print its token stream.
 - `grammar <grammar-file>` — load a grammar and print productions + parse table.
 - `parse <grammar-file> <source-or-file>` — predictively parse a program and
   print the LL(1) trace.
+- `compile <grammar-file> <source-or-file>` — run the semantic actions and
+  print the generated three-address code (`Declare`, `ADD`/`SUB`, `Store`,
+  `Read`, `Write`, `Halt`).
 
 A grammar-file argument is a path; a program argument is a path if it names an
 existing file, otherwise it is treated as inline source.
@@ -42,10 +46,12 @@ enforces the package's layer direction and cycle-freedom.
 - `lib/` — the library, laid out as clean-architecture rings: `src/domain/`
   (pure entities and logic: `Token`, `Grammar`, `CompileFailure`,
   `ParseResult`, the semantic structures), `src/contracts/` (the `Scanner`,
-  `GrammarLoader`, `Parser` ports), `src/usecases/` (`ScanUsecase`,
-  `ParseUsecase`), and `src/adapters/` (`TableScanner`, `TextGrammarLoader`,
-  `PredictiveLlParser`).
+  `GrammarLoader`, `Parser`, `CodeGenerator` ports), `src/usecases/`
+  (`ScanUsecase`, `ParseUsecase`, `CompileUsecase`), and `src/adapters/`
+  (`TableScanner`, `TextGrammarLoader`, `PredictiveLlParser`,
+  `SemanticCodeGenerator`).
 - `bin/ellellone.dart` — the command-line interface and composition root, which
-  injects the adapters (scanner into parser, parser into the parse usecase).
+  injects the adapters (scanner into parser and code generator, then into their
+  usecases).
 - `example/` — the grammar files it ships with and a demo program.
 - `test/` — unit, integration, and architecture tests.

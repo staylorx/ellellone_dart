@@ -134,6 +134,7 @@ final class _Lexer {
           final emitted = _emit(transition.state, _buffer);
           _consumeChar();
           if (emitted != null) return Right(emitted);
+          _buffer = '';
           state = 0;
 
         case ScanAction.haltNoAppend:
@@ -141,6 +142,7 @@ final class _Lexer {
           final emitted = _emit(transition.state, _buffer);
           if (transition.action == ScanAction.haltNoAppend) _consumeChar();
           if (emitted != null) return Right(emitted);
+          _buffer = '';
           state = 0;
       }
 

@@ -82,6 +82,50 @@ void main() {
     });
   });
 
+  group('Given the HW#1 listing one', () {
+    test('When scanned, then it yields the full original token stream', () {
+      scanAllWith('''
+        BEGIN --SOMETHING UNUSUAL
+          READ(A1, New_A, D, B);
+          C:= A1 +(New_A - D) - 75;
+          New_C:=((B - (7)+(C+D))) - (3 - A1); -- STUPID FORMULA
+          WRITE (C, A1+New_C);
+          -- WHAT ABOUT := B+D;
+        END
+        ''', upperReserved).should.be(
+        'BeginSym ReadSym LParen Id Comma Id Comma Id Comma Id RParen '
+        'SemiColon Id AssignOp Id PlusOp LParen Id MinusOp Id RParen MinusOp '
+        'IntLiteral SemiColon Id AssignOp LParen LParen Id MinusOp LParen '
+        'IntLiteral RParen PlusOp LParen Id PlusOp Id RParen RParen RParen '
+        'MinusOp LParen IntLiteral MinusOp Id RParen SemiColon WriteSym '
+        'LParen Id Comma Id PlusOp Id RParen SemiColon EndSym EofSym',
+      );
+    });
+  });
+
+  group('Given the HW#1 listing two', () {
+    test('When scanned, then it yields the full original token stream', () {
+      scanAllWith('''
+        BEGIN
+          READ(OPT, A, B);
+          READ(OPT, C, D);
+          Q_VAR_01 + 1 := (A+C)-(B-D);
+          VAR_SPREAD:= 1234 + 3456 +
+            --forgot to keep this on one line
+            7894 -(A+B);
+          WRITE(A, 75894589349);
+        END --Phew, finally done.
+        ''', upperReserved).should.be(
+        'BeginSym ReadSym LParen Id Comma Id Comma Id RParen SemiColon '
+        'ReadSym LParen Id Comma Id Comma Id RParen SemiColon Id PlusOp '
+        'IntLiteral AssignOp LParen Id PlusOp Id RParen MinusOp LParen Id '
+        'MinusOp Id RParen SemiColon Id AssignOp IntLiteral PlusOp IntLiteral '
+        'PlusOp IntLiteral MinusOp LParen Id PlusOp Id RParen SemiColon '
+        'WriteSym LParen Id Comma IntLiteral RParen SemiColon EndSym EofSym',
+      );
+    });
+  });
+
   group('Given a source with an unbufferable character', () {
     test('When scanned, then it surfaces a lexical failure', () {
       // A lone backtick has no transition from the start state.

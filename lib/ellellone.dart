@@ -25,8 +25,10 @@ library;
 
 export 'src/adapters/predictive_parser.dart';
 export 'src/adapters/scanner_table.dart';
+export 'src/adapters/semantic_code_generator.dart';
 export 'src/adapters/table_scanner.dart';
 export 'src/adapters/text_grammar_loader.dart';
+export 'src/contracts/code_generator.dart';
 export 'src/contracts/grammar_loader.dart';
 export 'src/contracts/parser.dart';
 export 'src/contracts/scanner.dart';
@@ -40,5 +42,6 @@ export 'src/domain/semantic/semantic_stack.dart';
 export 'src/domain/semantic/symbol_table.dart';
 export 'src/domain/tokens/token.dart';
 export 'src/domain/tokens/token_type.dart';
+export 'src/usecases/compile_usecase.dart';
 export 'src/usecases/parse_usecase.dart';
 export 'src/usecases/scan_usecase.dart';

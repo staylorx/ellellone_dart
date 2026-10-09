@@ -55,7 +55,7 @@ final class Semantic {
 
   /// The arithmetic mnemonic for an operator.
   String extractOp(OperatorRecord o) =>
-      o.kind == OperatorKind.plus ? 'ADD ' : 'SUB ';
+      o.kind == OperatorKind.plus ? 'ADD' : 'SUB';
 
   /// The code operand for a semantic stack attribute.
   String extractSemantic(SemanticRecord r) => switch (r.kind) {

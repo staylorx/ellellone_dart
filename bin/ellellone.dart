@@ -20,12 +20,13 @@ Future<void> main(List<String> arguments) async {
   final parser = ArgParser()
     ..addCommand('scan')
     ..addCommand('grammar')
-    ..addCommand('parse');
+    ..addCommand('parse')
+    ..addCommand('compile');
 
   final result = parser.parse(arguments);
   final command = result.command?.name;
   if (command == null) {
-    stderr.writeln('usage: ellellone <scan|grammar|parse> ...');
+    stderr.writeln('usage: ellellone <scan|grammar|parse|compile> ...');
     exitCode = 64;
     return;
   }
@@ -37,6 +38,8 @@ Future<void> main(List<String> arguments) async {
       _grammar(result.command!);
     case 'parse':
       _parse(result.command!);
+    case 'compile':
+      _compile(result.command!);
   }
 }
 
@@ -138,4 +141,41 @@ String? _sourceOf(List<String> rest) {
   final file = File(arg);
   if (file.existsSync()) return file.readAsStringSync();
   return arg;
+}
+
+void _compile(ArgResults arguments) {
+  if (arguments.rest.length < 2) {
+    stderr.writeln('usage: ellellone compile <grammar-file> <source-or-file>');
+    exitCode = 64;
+    return;
+  }
+  final file = File(arguments.rest[0]);
+  if (!file.existsSync()) {
+    stderr.writeln('grammar file not found: ${arguments.rest[0]}');
+    exitCode = 66;
+    return;
+  }
+  final Grammar grammar;
+  try {
+    grammar = TextGrammarLoader().load(file.readAsStringSync());
+  } on GrammarFailure catch (e) {
+    stderr.writeln('grammar error: $e');
+    exitCode = 65;
+    return;
+  }
+  final source = _sourceOf(arguments.rest.sublist(1));
+
+  // Composition root: scanner + grammar injected into the code generator,
+  // generator into the compile usecase.
+  final generator = SemanticCodeGenerator(TableScanner(), grammar);
+  final compile = CompileUsecase(generator);
+  switch (compile.call(source!)) {
+    case Left(value: final failure):
+      stderr.writeln('compile error: ${failure.message}');
+      exitCode = 65;
+    case Right(value: final code):
+      for (final line in code) {
+        stdout.writeln(line);
+      }
+  }
 }
