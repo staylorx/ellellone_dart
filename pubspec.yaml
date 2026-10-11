@@ -35,6 +35,14 @@ melos:
         dart run melos run analyze
         dart run melos run test
     clean: melos clean
+    clean:deep:
+      description: >
+        Targeted deep clean of generated artifacts — removes .dart_tool/,
+        build/, and .logs/ at the package root. Uses tool/clean_deep.dart (pure
+        dart:io, cross-platform) rather than bare `git clean -fdx`, which would
+        delete pubspec.lock (ignored via .gitignore) and .idea/. Never touches
+        source, pubspec.yaml, .gitignore, or AGENTS.md.
+      run: dart run tool/clean_deep.dart
 
 executables:
   ellellone: ellellone
