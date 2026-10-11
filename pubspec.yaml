@@ -34,7 +34,7 @@ melos:
         dart run melos run format:check
         dart run melos run analyze
         dart run melos run test
-    clean:deep: melos clean
+    clean: melos clean
 
 executables:
   ellellone: ellellone
