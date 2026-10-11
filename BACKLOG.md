@@ -4,17 +4,21 @@ Terse, actionable queue for this repo. No decisions, no metanarrative.
 
 ## Open
 
-(none.)
+- [ ] **Adopt melos (Topology C)** — add the `melos:` scripts contract to
+      `pubspec.yaml` (`useRootAsPackage: true`, `melos ^8.8.0` dev dep) with
+      `analyze`/`test`/`verify` done via `melos run`, and a deep-clean task
+      using native `melos clean` (the bible's deep-clean mechanism; removes
+      build/, .dart_tool/, .packages). NOTE: AGENTS.md calls this topology-A
+      but the bible §3.3 labels a single-package repo **Topology C** — SOURCE
+      AGENTS.md deviation text must be corrected too. Verify: `dart run melos
+      run verify` green. Do NOT hand-roll a clean:deep; use native `melos
+      clean`.
 
-## Deviations (do NOT auto-fix)
-
-- [ ] **No melos `scripts:` contract / no `clean:deep`** (DECLARED acceptance
-      exception, doctrine decision t_f0ce8719). Single-package, no-melos
-      topology-A CLI (AGENTS.md Deviations); bible §2.1 melos scripts contract
-      targets melos workspaces, and a hand-rolled clean:deep is discouraged for
-      a single-package no-melos CLI. The verify-gate criterion "clean:deep
-      present" is therefore N/A by declared topology, not silent drift. Do NOT
-      hand-add a melos script or restructure into a workspace without a real
-      reason. Equivalents: `dart clean` / remove `.dart_tool/` + `build/` by
-      hand; verified `git clean -n -fdx` removes only untracked+gitignored
-      `.dart_tool/` and `pubspec.lock` (no critical files at risk).
+Resolution: doctrine decision t_f0ce8719 (2026-10-11) — **adopt melos**. The
+bible §2.1 requires melos for EVERY topology incl. single-package Topology C
+(`useRootAsPackage: true`); native `melos clean` is the deep-clean mechanism. The
+previous "no-melos is doctrine-OK / clean:deep N/A" reading was corrected by the
+operator (re-verified against docs/02-toolchain.md §2.1 and docs/03-topology.md
+§3.3) — a single-package repo is still a melos workspace and does not drop melos
+to save a file. Closing this gap is tracked as code-fix work above, not accepted
+as a deviation.
