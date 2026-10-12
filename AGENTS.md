@@ -47,9 +47,11 @@ then the parser/generator into their usecases.
 
 ## Deviations from the bible (tracked, see BACKLOG for open ones)
 
-- **Single package, no melos/workspace** (bible topology A: one-delivery CLI).
-  The rings are directories, not separate packages; this keeps the three tools
-  in one delivery and the arch gate is the hard boundary.
+- **Single-package melos workspace (Topology C, `useRootAsPackage: true`).** Adopted
+  melos per bible §2.1/§3.3 (decided t_f0ce8719, shipped 321af33) with a scripts contract
+  including `clean:deep` → `tool/clean_deep.dart` (genuine deep clean of `.dart_tool/`,
+  `build/`, `.logs/`). The rings remain directories, not separate packages — this keeps the
+  three tools in one delivery and the arch gate is the hard boundary.
 - **No repository/persistence ring.** A compiler has no datasource; the only
   real IO is file reading in the CLI. The bible's ≥2-repository-adapter rule
   targets persistence and does not apply.
